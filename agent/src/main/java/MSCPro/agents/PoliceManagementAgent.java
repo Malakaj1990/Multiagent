@@ -8,33 +8,10 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 
-class IncidentHandlingBehaviuor extends SimpleBehaviour
+
+class PoliceManagementBehaviour extends SimpleBehaviour
 {
-	public IncidentHandlingBehaviuor(String conversationID)
-	{
-		this.conversationID = conversationID;
-	}
-
-	@Override
-	public void action() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public boolean done() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-	
-	String conversationID;
-	
-}
-
-
-class HospitalManagementBehaviour extends SimpleBehaviour
-{
-	public HospitalManagementBehaviour(HospitalManagementAgent a) {
+	public PoliceManagementBehaviour(Agent a) {
 		super(a);
 		this.agent = a;
 	}
@@ -58,14 +35,12 @@ class HospitalManagementBehaviour extends SimpleBehaviour
 		return false;
 	}
 	
-	HospitalManagementAgent agent;
-	
+	Agent agent;
 }
 
 
-public class HospitalManagementAgent extends Agent 
-{
-	
+
+public class PoliceManagementAgent extends Agent{
 	@Override
 	protected void setup() 
     { 
@@ -73,7 +48,7 @@ public class HospitalManagementAgent extends Agent
 		 DFAgentDescription dfd = new DFAgentDescription();
 	     dfd.setName( getAID() );
 	     ServiceDescription sd  = new ServiceDescription();
-	     sd.setType( "HospitalManagementAgent" );
+	     sd.setType( "PoliceManagementAgent" );
 	     sd.setName( getLocalName() );
 	     dfd.addServices(sd);
 	     
@@ -84,7 +59,7 @@ public class HospitalManagementAgent extends Agent
 		
         System.out.println("Hello World. ");
         System.out.println("My name is "+ getLocalName()); 
-        addBehaviour(new HospitalManagementBehaviour(this));
+        addBehaviour(new PoliceManagementBehaviour(this));
     }
 	
 	@Override
@@ -93,4 +68,6 @@ public class HospitalManagementAgent extends Agent
        try { DFService.deregister(this); }
        catch (Exception e) {}
     }
+	
+	
 }

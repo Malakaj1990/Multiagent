@@ -1,6 +1,8 @@
+MSCPro\agents\PoliceManagementAgent.class
 MSCPro\agents\ReportingAgent.class
-MSCPro\agents\ReportingBehaviour.class
-MSCPro\agents\HospitalManagementBehaviour.class
+MSCPro\agents\PoliceManagementBehaviour.class
 MSCPro\ontology\DisasterManagement.class
 MSCPro\actions\ReportAccidentAction.class
+MSCPro\agents\ReportingBehaviour.class
+MSCPro\agents\HospitalManagementBehaviour.class
 MSCPro\agents\HospitalManagementAgent.class

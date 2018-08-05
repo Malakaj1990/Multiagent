@@ -1,6 +1,8 @@
 package MSCPro.agents;
 
 
+import java.io.IOException;
+
 import MSCPro.actions.ReportAccidentAction;
 import MSCPro.ontology.DisasterManagement;
 import jade.content.Concept;
@@ -14,30 +16,38 @@ import jade.content.onto.UngroundedException;
 import jade.content.onto.basic.Action;
 import jade.core.AID;
 import jade.core.Agent;
-/**
- * Hello world!
- *
- */
 import jade.core.behaviours.SimpleBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.UnreadableException;
 import jade.tools.testagent.ReceiveCyclicBehaviour;
+
+
 
 class ReportingBehaviour extends SimpleBehaviour
 {
 
 	String name;
-	Agent a;
+	ReportingAgent agent;
+	int incidentID = 0;
 
-	public ReportingBehaviour(Agent agent ,String name) {
+	public ReportingBehaviour(ReportingAgent agent ,String name) {
 		super(agent);
 		this.name = name;
-		this.a = agent;
+		this.agent = agent;
 	}
 	
+	
+	String generateIncidentID()
+	{
+		++incidentID;
+		String incidentIDStr = "ACC";
+		incidentIDStr += incidentID;
+		return incidentIDStr;
+	}
 	
 	AID getService(String serviceType)
 	{
@@ -48,7 +58,7 @@ class ReportingBehaviour extends SimpleBehaviour
         dfd.addServices(sd);
         try
         {
-            DFAgentDescription[] result = DFService.search(a, dfd);
+            DFAgentDescription[] result = DFService.search(agent, dfd);
             if (result.length>0)
                 return result[0].getName() ;
         }
@@ -59,40 +69,50 @@ class ReportingBehaviour extends SimpleBehaviour
 	@Override
 	public void action() {
 		
-		ACLMessage msg = a.receive();
-		/*if(msg != null)
-		{
-			System.out.println("="
-					+ a.getLocalName() + "<-" +
-					msg.getContent());
-			ACLMessage replyMsg = new ACLMessage(ACLMessage.INFORM);
-			replyMsg.setContent("Something bad happend");
-			replyMsg.addReceiver(getService("HospitalManagementAgent"));
-			a.send(replyMsg);
-			block();
-		}*/
+		ACLMessage msg = agent.receive();
 		
-		if(msg != null)
+		if(msg == null)
 		{
-		ContentElement content = null;
-		try {
-			content = a.getContentManager().extractContent(msg);
-		} catch (Exception e) {
-			e.printStackTrace();
-		
+			return;
 		}
-        Concept action = ((Action)content).getAction();
-		if(action instanceof ReportAccidentAction)
-		{
-			System.out.println("Accident Report Recived");
-			
-		}
-		else 
-		{
-			System.out.println("Unknown");
-		}
-		}
-	}
+        switch(msg.getPerformative())
+        {
+        case (ACLMessage.INFORM):
+        	ContentElement content = null;
+			try {
+					content = agent.getContentManager().extractContent(msg);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			Concept action = ((Action)content).getAction();
+			if(action instanceof ReportAccidentAction)
+			{
+				
+				System.out.println("Accident Report Recived");
+				ACLMessage replyMsg = new ACLMessage(ACLMessage.INFORM);
+				replyMsg.setLanguage(agent.codec.getName());
+				replyMsg.setOntology(agent.ontology.getName());
+				replyMsg.addReceiver(getService("HospitalManagementAgent"));
+				replyMsg.addReceiver(getService("PoliceManagementAgent"));
+				replyMsg.setConversationId(generateIncidentID());
+				try {
+					agent.getContentManager().fillContent(replyMsg, content);
+					agent.send(replyMsg);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				
+			}
+			else 
+			{
+				System.out.println("Unknown Message Type Recived");
+			}
+        	break;
+        default:
+        	System.out.println("Invlid Request Type Recived");
+        }
+}
+	
 
 	@Override
 	public boolean done() {
@@ -113,30 +133,7 @@ public class ReportingAgent extends Agent
         
         getContentManager().registerLanguage(codec);
         getContentManager().registerOntology(ontology);
-        
-        ReportAccidentAction reportAccident = new ReportAccidentAction();
-    	int i = 15;
-    	float amount = (float)10.1;
-    	reportAccident.setSeverity("LOW");
-    	reportAccident.setCasualtiesCount(100);
-    	reportAccident.setLocation("Location1");
-    	
-    	
-    	ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-    	msg.setLanguage(codec.getName());
-    	msg.setOntology(ontology.getName());
-    	try {
-			getContentManager().fillContent(msg, new Action( new AID( "ReportingAgent", AID.ISLOCALNAME ), reportAccident));
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	
-    	System.out.println(msg.getLanguage()+" " + msg.getOntology() + " " );
-    	System.out.println(msg.getContent());
-    	
-    	
-        
+           
     }
 	
 	public Codec codec = new SLCodec();
