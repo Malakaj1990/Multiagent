@@ -24,6 +24,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.UnreadableException;
 import jade.tools.testagent.ReceiveCyclicBehaviour;
+import jade.util.Logger;
 
 
 
@@ -69,12 +70,13 @@ class ReportingBehaviour extends SimpleBehaviour
 	@Override
 	public void action() {
 		
-		ACLMessage msg = agent.receive();
 		
+		ACLMessage msg = agent.receive();
 		if(msg == null)
 		{
 			return;
 		}
+		agent.logger.log(jade.util.Logger.INFO,"Reporting behaviour action");
         switch(msg.getPerformative())
         {
         case (ACLMessage.INFORM):
@@ -126,8 +128,10 @@ public class ReportingAgent extends Agent
 {
 	protected void setup() 
     { 
+		
 	     
         System.out.println("Hello World12. ");
+        logger.log(jade.util.Logger.INFO, "Reporting agent on Start"); 
         System.out.println("My name is "+ getLocalName()); 
         addBehaviour(new ReportingBehaviour(this,"Instance1"));
         
@@ -139,6 +143,7 @@ public class ReportingAgent extends Agent
 	public Codec codec = new SLCodec();
 	public Ontology ontology = DisasterManagement.getInstance();
 	
+	public Logger logger = jade.util.Logger.getMyLogger(this.getClass().getName());
 
 	
 }

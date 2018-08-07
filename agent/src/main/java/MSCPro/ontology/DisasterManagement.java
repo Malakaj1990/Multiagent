@@ -20,12 +20,19 @@ public class DisasterManagement extends Ontology {
 		try {
 		
 			System.out.println("Get Schema " + getSchema(Integer.class));
-			AgentActionSchema as = new AgentActionSchema(ReportAccidentAction.REPORTING_ACCIDENT);
-			add(as, ReportAccidentAction.class);
-			as.add(ReportAccidentAction.REPORTING_ACCIDENT_CASUALTIES_COUNT, (PrimitiveSchema) getSchema(BasicOntology.INTEGER), ObjectSchema.MANDATORY);
-			as.add(ReportAccidentAction.REPORTING_ACCIDENT_LOCATION, (PrimitiveSchema) getSchema(BasicOntology.STRING), ObjectSchema.MANDATORY);
-			as.add(ReportAccidentAction.REPORTING_ACCIDENT_SEVERITY, (PrimitiveSchema) getSchema(BasicOntology.STRING), ObjectSchema.MANDATORY);
+			AgentActionSchema reportingAS = new AgentActionSchema(ReportAccidentAction.REPORTING_ACCIDENT);
+			add(reportingAS, ReportAccidentAction.class);
+			reportingAS.add(ReportAccidentAction.REPORTING_ACCIDENT_CASUALTIES_COUNT, (PrimitiveSchema) getSchema(BasicOntology.INTEGER), ObjectSchema.MANDATORY);
+			reportingAS.add(ReportAccidentAction.REPORTING_ACCIDENT_LOCATION, (PrimitiveSchema) getSchema(BasicOntology.STRING), ObjectSchema.MANDATORY);
+			reportingAS.add(ReportAccidentAction.REPORTING_ACCIDENT_SEVERITY, (PrimitiveSchema) getSchema(BasicOntology.STRING), ObjectSchema.MANDATORY);
 			
+			AgentActionSchema IncidentComAS = new AgentActionSchema(IncidentCompletionAction.INCIDENT_COMPLETE_ACTION);
+			add(IncidentComAS,IncidentCompletionAction.class);
+			IncidentComAS.add(IncidentCompletionAction.INCIDENT_COMPLETE_CONVERSATION_ID,  (PrimitiveSchema) getSchema(BasicOntology.STRING),ObjectSchema.MANDATORY);
+			
+			AgentActionSchema dropOffCompAS = new AgentActionSchema(HospitalDropOffCompletionAction.HOSPITAL_COMPLETION_DROPOFF_ACTION);
+			add(dropOffCompAS,HospitalDropOffCompletionAction.class);
+			dropOffCompAS.add(HospitalDropOffCompletionAction.HOSPITAL_COMPLETION_DROPOFF_COUNT, (PrimitiveSchema) getSchema(BasicOntology.INTEGER),ObjectSchema.MANDATORY);
 		}
 		catch(OntologyException oe) {
 			oe.printStackTrace();

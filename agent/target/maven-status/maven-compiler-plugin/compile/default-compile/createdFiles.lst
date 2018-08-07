@@ -1,8 +1,13 @@
 MSCPro\agents\PoliceManagementAgent.class
+MSCPro\actions\HospitalDropOffCompletionAction.class
 MSCPro\agents\ReportingAgent.class
+MSCPro\agents\AmbulanceAgent.class
 MSCPro\agents\PoliceManagementBehaviour.class
+MSCPro\actions\IncidentCompletionAction.class
+MSCPro\agents\IncidentHandlingBehaviuor.class
 MSCPro\ontology\DisasterManagement.class
 MSCPro\actions\ReportAccidentAction.class
 MSCPro\agents\ReportingBehaviour.class
 MSCPro\agents\HospitalManagementBehaviour.class
+MSCPro\agents\AmbulanceAgentBehaviour.class
 MSCPro\agents\HospitalManagementAgent.class
