@@ -3,6 +3,8 @@ package MSCPro.agents;
 import java.util.HashSet;
 import java.util.Set;
 
+import MSCPro.actions.AmbulanceAccidentAction;
+import MSCPro.actions.AmbulanceNotSentAction;
 import MSCPro.actions.HospitalDropOffCompletionAction;
 import MSCPro.actions.IncidentCompletionAction;
 import MSCPro.actions.ReportAccidentAction;
@@ -46,6 +48,7 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 		if(currentIncident.getSeverity().equalsIgnoreCase("LOW") == true)
 		{
 			agent.logAction("Low Severity Incident Reported no ambulance will be dispatched");
+			sendNoAmbulanceSentMessage();
 		}
 		else
 		{
@@ -73,7 +76,11 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 		{
 			onDropOffCompletion((HospitalDropOffCompletionAction)action);
 		}
-		else
+		else if(action instanceof AmbulanceAccidentAction)
+		{
+			onAmbulanceAccident((AmbulanceAccidentAction)action);
+		}
+		else 
 		{
 		}
 		
@@ -85,6 +92,12 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 	public boolean done() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+	
+	private void onAmbulanceAccident(AmbulanceAccidentAction action)
+	{
+		agent.logAction("Ambulance " + action.getAgentName() + "has met with an accident "
+				+ "new ambulance to dispatch");
 	}
 	
 	private void createNewAmbulance()
@@ -144,6 +157,23 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 			} 
 			agent.send(replyMsg);
 		}
+		
+	}
+	
+	private void sendNoAmbulanceSentMessage()
+	{
+		ACLMessage replyMsg = new ACLMessage(ACLMessage.INFORM);
+		replyMsg.setLanguage(agent.codec.getName());
+		replyMsg.setOntology(agent.ontology.getName());
+		replyMsg.setConversationId(conversationID);
+		replyMsg.addReceiver(new AID("PoliceManagementAgent",AID.ISLOCALNAME));
+		AmbulanceNotSentAction action = new AmbulanceNotSentAction();
+		try {
+			agent.getContentManager().fillContent(replyMsg, new Action(agent.getAID(),action) );
+		} catch (Exception e) {
+			e.printStackTrace();
+		} 
+		agent.send(replyMsg);
 		
 	}
 	

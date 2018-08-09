@@ -2,8 +2,10 @@ package MSCPro.agents;
 
 import javax.crypto.NullCipher;
 
+import MSCPro.actions.AmbulanceAccidentAction;
 import MSCPro.actions.HospitalDropOffCompletionAction;
 import MSCPro.actions.IncidentCompletionAction;
+import MSCPro.actions.ReportAccidentAction;
 import MSCPro.ontology.DisasterManagement;
 import jade.content.Concept;
 import jade.content.ContentElement;
@@ -11,6 +13,7 @@ import jade.content.lang.Codec;
 import jade.content.lang.sl.SLCodec;
 import jade.content.onto.Ontology;
 import jade.content.onto.basic.Action;
+import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.domain.DFService;
@@ -45,7 +48,7 @@ class AmbulanceAgentBehaviour extends SimpleBehaviour
 		{
 			return;
 		}
-		System.out.println("Ambulance agent message Recived");
+	
 		ContentElement content = null;
 		try {
 				content = agent.getContentManager().extractContent(msg);
@@ -58,6 +61,11 @@ class AmbulanceAgentBehaviour extends SimpleBehaviour
 			agent.logMessage("Inicident Completed Agent Terminated");
 			agent.doDelete();
 		}
+		else if (action instanceof AmbulanceAccidentAction )
+		{
+			onAmbulanceAccident((AmbulanceAccidentAction)action);
+		}
+			
 		
 		block();
 	
@@ -67,6 +75,43 @@ class AmbulanceAgentBehaviour extends SimpleBehaviour
 	@Override
 	public boolean done() {
 		return false;
+	}
+	
+	void onAmbulanceAccident(AmbulanceAccidentAction action)
+	{
+
+		ACLMessage replyToHospitalMsg = new ACLMessage(ACLMessage.INFORM);
+		action.setAgentName(agent.getLocalName());
+		replyToHospitalMsg.setConversationId(this.conversationID);
+		replyToHospitalMsg.setLanguage(agent.codec.getName());
+		replyToHospitalMsg.setOntology(agent.ontology.getName());
+		replyToHospitalMsg.addReceiver(new AID("HospitalManagementAgent",AID.ISLOCALNAME));
+		try {
+			agent.getContentManager().fillContent(replyToHospitalMsg, new Action(agent.getAID(),action) );
+		} catch (Exception e) {
+			e.printStackTrace();
+		} 
+		agent.send(replyToHospitalMsg);
+		
+		ACLMessage reportIncidentMsg = new ACLMessage(ACLMessage.INFORM);
+		ReportAccidentAction reportAction = new ReportAccidentAction();
+		reportAction.setCasualtiesCount(action.getCasualtiesCount());
+		reportAction.setLocation(action.getLocation());
+		reportAction.setSeverity(action.getSeverity());
+
+		reportIncidentMsg.setLanguage(agent.codec.getName());
+		reportIncidentMsg.setOntology(agent.ontology.getName());
+		reportIncidentMsg.addReceiver(new AID("ReportingAgent",AID.ISLOCALNAME));
+		try {
+			agent.getContentManager().fillContent(reportIncidentMsg, new Action(agent.getAID(),reportAction) );
+		} catch (Exception e) {
+			e.printStackTrace();
+		} 
+		
+		agent.send(reportIncidentMsg);
+		
+		agent.logMessage("Met with an accident ambulance terminating");
+		agent.doDelete();
 	}
 	
 	

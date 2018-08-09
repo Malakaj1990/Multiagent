@@ -19,7 +19,7 @@ public class DisasterManagement extends Ontology {
 		
 		try {
 		
-			System.out.println("Get Schema " + getSchema(Integer.class));
+			
 			AgentActionSchema reportingAS = new AgentActionSchema(ReportAccidentAction.REPORTING_ACCIDENT);
 			add(reportingAS, ReportAccidentAction.class);
 			reportingAS.add(ReportAccidentAction.REPORTING_ACCIDENT_CASUALTIES_COUNT, (PrimitiveSchema) getSchema(BasicOntology.INTEGER), ObjectSchema.MANDATORY);
@@ -33,6 +33,17 @@ public class DisasterManagement extends Ontology {
 			AgentActionSchema dropOffCompAS = new AgentActionSchema(HospitalDropOffCompletionAction.HOSPITAL_COMPLETION_DROPOFF_ACTION);
 			add(dropOffCompAS,HospitalDropOffCompletionAction.class);
 			dropOffCompAS.add(HospitalDropOffCompletionAction.HOSPITAL_COMPLETION_DROPOFF_COUNT, (PrimitiveSchema) getSchema(BasicOntology.INTEGER),ObjectSchema.MANDATORY);
+			
+			AgentActionSchema ambulanceAccAS = new AgentActionSchema(AmbulanceAccidentAction.AMBULANCE_ACCIDENT);
+			add(ambulanceAccAS,AmbulanceAccidentAction.class);
+			ambulanceAccAS.add(AmbulanceAccidentAction.AMBULANCE_ACCIDENT_CASUALTIES_COUNT, (PrimitiveSchema) getSchema(BasicOntology.INTEGER), ObjectSchema.MANDATORY);
+			ambulanceAccAS.add(AmbulanceAccidentAction.AMBULANCE_ACCIDENT_LOCATION, (PrimitiveSchema) getSchema(BasicOntology.STRING), ObjectSchema.MANDATORY);
+			ambulanceAccAS.add(AmbulanceAccidentAction.AMBULANCE_ACCIDENT_SEVERITY, (PrimitiveSchema) getSchema(BasicOntology.STRING), ObjectSchema.MANDATORY);
+			ambulanceAccAS.add(AmbulanceAccidentAction.AMBULANCE_ACCIDENT_AGENT_NAME, (PrimitiveSchema) getSchema(BasicOntology.STRING), ObjectSchema.OPTIONAL);
+			
+			AgentActionSchema ambulanceNotSentAccAS = new AgentActionSchema(AmbulanceNotSentAction.AMBULANCE_NOT_SENT);
+			add(ambulanceNotSentAccAS,AmbulanceNotSentAction.class);
+			
 		}
 		catch(OntologyException oe) {
 			oe.printStackTrace();
