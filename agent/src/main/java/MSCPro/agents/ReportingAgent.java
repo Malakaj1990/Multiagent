@@ -85,6 +85,7 @@ class ReportingBehaviour extends SimpleBehaviour
 					content = agent.getContentManager().extractContent(msg);
 			} catch (Exception e) {
 				e.printStackTrace();
+				return;
 			}
 			Concept action = ((Action)content).getAction();
 			if(action instanceof ReportAccidentAction)

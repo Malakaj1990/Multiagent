@@ -4,9 +4,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.LongSummaryStatistics;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -39,7 +41,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
-class IncidentHandlingBehaviuor extends SimpleBehaviour
+class IncidentHandlingBehaviuor 
 {
 	public IncidentHandlingBehaviuor(HospitalManagementAgent agent,String conversationID,ReportAccidentAction incident,
 			HospitalManagementBehaviour parentBehaviour)
@@ -52,7 +54,7 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 	
 	}
 	
-	@Override
+	
 	public void onStart()
 	{
 		agent.logAction("New incident started = " + this.conversationID);
@@ -72,10 +74,10 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 		}
 	}
 	
-	@Override
-	public void action() {
+
+	public void action(ContentElement content) {
 		
-		MessageTemplate mt = MessageTemplate.MatchConversationId(conversationID);
+		/*MessageTemplate mt = MessageTemplate.MatchConversationId(conversationID);
 		ACLMessage msg = agent.receive(mt);
 		if(msg == null)
 		{
@@ -89,6 +91,7 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 			e.printStackTrace();
 			return;
 		}
+		*/
 		Concept action = ((Action)content).getAction();
 		if(action instanceof HospitalDropOffCompletionAction)
 		{
@@ -100,19 +103,13 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 		}
 		else 
 		{
-			System.out.println("IncidentHandlingBehaviuor Unknown Message type recived = " + msg.getConversationId());
+			System.out.println("IncidentHandlingBehaviuor Unknown Message type recived  ");
 		}
 		
 	
 		
 	}
 
-	@Override
-	public boolean done() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-	
 	private void onAmbulanceAccident(AmbulanceAccidentAction action)
 	{
 		agent.logAction("Ambulance " + action.getAgentName() + "has met with an accident "
@@ -211,6 +208,7 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 			} 
 			agent.send(replyMsg);
 			isActive = false;
+			parentBehaviour.rearrageResources();
 		}
 		
 	}
@@ -322,7 +320,7 @@ class HospitalManagementBehaviour extends SimpleBehaviour
 	public HospitalManagementBehaviour(HospitalManagementAgent a) {
 		super(a);
 		this.agent = a;
-		incidentsList = new ArrayList<IncidentHandlingBehaviuor>();
+		incidentsList = new HashMap<String,IncidentHandlingBehaviuor>();
 	}
 
 	
@@ -375,13 +373,18 @@ class HospitalManagementBehaviour extends SimpleBehaviour
 				{
 					IncidentHandlingBehaviuor newIncident = new IncidentHandlingBehaviuor(agent,msg.getConversationId(),(ReportAccidentAction)action,
 							this);
-					incidentsList.add(newIncident);
-					agent.parallelBehaviour.addSubBehaviour(newIncident);
+					incidentsList.put(msg.getConversationId(), newIncident);
+					newIncident.onStart();
+					//agent.parallelBehaviour.addSubBehaviour(newIncident);
 					
 				}
 				else 
 				{
-					System.out.println("Unknown Message Type Recived");
+					IncidentHandlingBehaviuor behaviour = incidentsList.get(msg.getConversationId());
+					if(behaviour != null)
+					{
+						behaviour.action(content);
+					}
 				}
 	        	break;
 	        default:
@@ -424,7 +427,7 @@ class HospitalManagementBehaviour extends SimpleBehaviour
 			int gain = requestedBehaviour.getCurrentCost() - requestedBehaviour.getCostAfterUpdate(1);
 			int loss = gain;
 			
-			for(IncidentHandlingBehaviuor behaviour : incidentsList)
+			for(IncidentHandlingBehaviuor behaviour : incidentsList.values())
 			{
 				if(behaviour == requestedBehaviour)
 				{
@@ -457,13 +460,24 @@ class HospitalManagementBehaviour extends SimpleBehaviour
 		
 	}
 	
+	void rearrageResources()
+	{
+		for(IncidentHandlingBehaviuor behaviour : incidentsList.values())
+		{
+			if(behaviour.isActive() == true)
+			{
+				assignAmbulance(behaviour);
+			}
+		}
+	}
+	
 	void onReleaseAmbulance()
 	{
 		++ambulancesCount;
 	}
 	
 	HospitalManagementAgent agent;
-	List<IncidentHandlingBehaviuor> incidentsList;
+	Map<String,IncidentHandlingBehaviuor> incidentsList;
 	int ambulancesCount =0;
 	
 	
