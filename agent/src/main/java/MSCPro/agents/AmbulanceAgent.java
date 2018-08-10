@@ -86,6 +86,7 @@ class AmbulanceAgentBehaviour extends SimpleBehaviour
 		replyToHospitalMsg.setLanguage(agent.codec.getName());
 		replyToHospitalMsg.setOntology(agent.ontology.getName());
 		replyToHospitalMsg.addReceiver(new AID("HospitalManagementAgent",AID.ISLOCALNAME));
+		System.out.println("Conversation ID = " + this.conversationID);
 		try {
 			agent.getContentManager().fillContent(replyToHospitalMsg, new Action(agent.getAID(),action) );
 		} catch (Exception e) {

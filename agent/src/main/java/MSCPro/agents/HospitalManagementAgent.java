@@ -1,6 +1,13 @@
 package MSCPro.agents;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.LongSummaryStatistics;
+import java.util.Properties;
 import java.util.Set;
 
 import MSCPro.actions.AmbulanceAccidentAction;
@@ -22,6 +29,8 @@ import jade.core.Agent;
 import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import jade.wrapper.StaleProxyException;
+import jade.core.behaviours.ParallelBehaviour;
+import jade.core.behaviours.SequentialBehaviour;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
@@ -32,12 +41,14 @@ import jade.lang.acl.MessageTemplate;
 
 class IncidentHandlingBehaviuor extends SimpleBehaviour
 {
-	public IncidentHandlingBehaviuor(HospitalManagementAgent agent,String conversationID,ReportAccidentAction incident)
+	public IncidentHandlingBehaviuor(HospitalManagementAgent agent,String conversationID,ReportAccidentAction incident,
+			HospitalManagementBehaviour parentBehaviour)
 	{
 		this.conversationID = conversationID;
 		this.agent = agent;
 		this.currentIncident = incident;
 		this.ambulances = new HashSet<String>();
+		this.parentBehaviour = parentBehaviour;
 	
 	}
 	
@@ -52,7 +63,12 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 		}
 		else
 		{
-			createNewAmbulance();
+			parentBehaviour.assignAmbulance(this);
+		
+			if(ambulances.size() == 0)
+			{
+				sendNoAmbulanceSentMessage();
+			}
 		}
 	}
 	
@@ -65,11 +81,13 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 		{
 			return;
 		}
+		System.out.println("IncidentHandlingBehaviuor Message Recived");
 		ContentElement content = null;
 		try {
 				content = agent.getContentManager().extractContent(msg);
 		} catch (Exception e) {
 			e.printStackTrace();
+			return;
 		}
 		Concept action = ((Action)content).getAction();
 		if(action instanceof HospitalDropOffCompletionAction)
@@ -82,9 +100,10 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 		}
 		else 
 		{
+			System.out.println("IncidentHandlingBehaviuor Unknown Message type recived = " + msg.getConversationId());
 		}
 		
-		block();
+	
 		
 	}
 
@@ -98,9 +117,11 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 	{
 		agent.logAction("Ambulance " + action.getAgentName() + "has met with an accident "
 				+ "new ambulance to dispatch");
+		ambulances.remove(action.getAgentName());
+		parentBehaviour.assignAmbulance(this);
 	}
 	
-	private void createNewAmbulance()
+	public void createNewAmbulance()
 	{
 		AgentContainer c = agent.getContainerController();
 		++initiatedambulance_count;
@@ -116,6 +137,38 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 			
 			e.printStackTrace();
 		}
+	}
+	
+	public void removeOneAmbulance()
+	{
+		
+		if(ambulances.size() <= 0 )
+		{
+			System.out.println("Invalid removal Size");
+		}
+		ACLMessage replyMsg = new ACLMessage(ACLMessage.INFORM);
+		replyMsg.setLanguage(agent.codec.getName());
+		replyMsg.setOntology(agent.ontology.getName());
+		replyMsg.setConversationId(conversationID);
+		
+		String ambulanceID = ambulances.iterator().next();
+		replyMsg.addReceiver(new AID(ambulanceID,AID.ISLOCALNAME));
+		ambulances.remove(ambulanceID);
+		
+		IncidentCompletionAction completionAction = new IncidentCompletionAction();
+		completionAction.setconversationID(conversationID);
+		try {
+			agent.getContentManager().fillContent(replyMsg, new Action(agent.getAID(),completionAction) );
+		} catch (Exception e) {
+			e.printStackTrace();
+		} 
+		agent.send(replyMsg);
+		
+		if(ambulances.size() == 0)
+		{
+			sendNoAmbulanceSentMessage();
+		}
+		
 	}
 	
 	private void onDropOffCompletion(HospitalDropOffCompletionAction action)
@@ -147,6 +200,7 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 			{
 				System.out.println("Send Terminaction Message to  " + ambulanceIDs);
 				replyMsg.addReceiver(new AID(ambulanceIDs,AID.ISLOCALNAME));
+				parentBehaviour.onReleaseAmbulance();
 			}
 			IncidentCompletionAction completionAction = new IncidentCompletionAction();
 			completionAction.setconversationID(conversationID);
@@ -156,6 +210,7 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 				e.printStackTrace();
 			} 
 			agent.send(replyMsg);
+			isActive = false;
 		}
 		
 	}
@@ -177,11 +232,85 @@ class IncidentHandlingBehaviuor extends SimpleBehaviour
 		
 	}
 	
+	public int getCurrentCost()
+	{
+		return getCost(ambulances.size());
+	}
+	
+	public int getCostAfterUpdate(int updateCount)
+	{
+		return getCost((ambulances.size() + updateCount));
+		
+	}
+	
+	public int getCost(int ambulanceCount)
+	{
+		
+		String severity = currentIncident.getSeverity();
+		
+		if(ambulanceCount < 0 )
+		{
+			return 10000;
+		}
+		
+		if(severity.equalsIgnoreCase("LOW"))
+		{
+			return 0;
+		}
+		
+		if(ambulanceCount == 0)
+		{
+			if(severity.equalsIgnoreCase("MEDIUM"))
+			{
+				return 500;
+			}
+			else if(severity.equalsIgnoreCase("HIGH"))
+			{
+				return 1000;
+			}
+			else 
+			{
+				return 10000;
+			}
+					
+		}
+	
+		if(currentIncident.getCasualtiesCount()/ambulanceCount < 1)
+		{
+			return 1000;
+		}
+		
+		if(severity.equalsIgnoreCase("MEDIUM"))
+		{
+			return 500/(ambulanceCount+1);
+		}
+		
+		if(severity.equalsIgnoreCase("HIGH"))
+		{
+			return 1000/(ambulanceCount+1);
+		}
+		return 10000;
+		
+	}
+	
+	int getAmbulanceSize()
+	{
+		return ambulances.size();
+	}
+	
+	boolean isActive()
+	{
+		return isActive;
+	}
+	
 	String conversationID;
 	HospitalManagementAgent agent;
 	ReportAccidentAction currentIncident;
 	int initiatedambulance_count = 0;
 	Set<String> ambulances;
+	HospitalManagementBehaviour parentBehaviour;
+	
+	boolean isActive = true;
 	
 	
 	
@@ -193,8 +322,29 @@ class HospitalManagementBehaviour extends SimpleBehaviour
 	public HospitalManagementBehaviour(HospitalManagementAgent a) {
 		super(a);
 		this.agent = a;
+		incidentsList = new ArrayList<IncidentHandlingBehaviuor>();
 	}
 
+	
+	@Override
+	public void onStart()
+	{
+		
+		Properties prop = new Properties();
+		InputStream input = null;
+		try {	
+			input = new FileInputStream("src/main/resources/HospitalManagement.properties");	
+			prop.load(input);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		ambulancesCount = Integer.parseInt(prop.getProperty("ambulanceCount"));
+		agent.logAction("Ambulance Count = " + ambulancesCount);
+	
+	}
+	
 	@Override
 	public void action() {
 		
@@ -203,6 +353,11 @@ class HospitalManagementBehaviour extends SimpleBehaviour
 		ACLMessage msg = agent.receive();
 		if(msg == null)
 		{
+			return;
+		}
+		if(msg.getConversationId() == null)
+		{
+			agent.logAction("Conversation ID not set");
 			return;
 		}
 		
@@ -218,7 +373,10 @@ class HospitalManagementBehaviour extends SimpleBehaviour
 				Concept action = ((Action)content).getAction();
 				if(action instanceof ReportAccidentAction)
 				{
-					agent.addBehaviour(new IncidentHandlingBehaviuor(agent,msg.getConversationId(),(ReportAccidentAction)action));
+					IncidentHandlingBehaviuor newIncident = new IncidentHandlingBehaviuor(agent,msg.getConversationId(),(ReportAccidentAction)action,
+							this);
+					incidentsList.add(newIncident);
+					agent.parallelBehaviour.addSubBehaviour(newIncident);
 					
 				}
 				else 
@@ -238,7 +396,76 @@ class HospitalManagementBehaviour extends SimpleBehaviour
 		return false;
 	}
 	
+	
+	void assignAmbulance(IncidentHandlingBehaviuor requestedBehaviour)
+	{
+		while(true)
+		{
+			int currentCost = requestedBehaviour.getCurrentCost();
+			int addedCost = requestedBehaviour.getCostAfterUpdate(1);
+			if(addedCost >= currentCost)
+			{
+				break;
+			}
+			
+			if(ambulancesCount > 0 )
+			{
+				requestedBehaviour.createNewAmbulance();
+				--ambulancesCount;
+			}
+			else
+			{
+				break;
+			}
+		}
+		
+		while (true)
+		{
+			int gain = requestedBehaviour.getCurrentCost() - requestedBehaviour.getCostAfterUpdate(1);
+			int loss = gain;
+			
+			for(IncidentHandlingBehaviuor behaviour : incidentsList)
+			{
+				if(behaviour == requestedBehaviour)
+				{
+					continue;
+				}
+				if(behaviour.getAmbulanceSize() == 0 )
+				{
+					continue;
+				}
+				if(behaviour.isActive() == false)
+				{
+					continue;
+				}
+				
+				loss =  behaviour.getCostAfterUpdate(-1) - behaviour.getCurrentCost();
+				if(gain > loss)
+				{
+					behaviour.removeOneAmbulance();
+					requestedBehaviour.createNewAmbulance();
+					break;
+				}
+			}
+			
+			if(gain <= loss)
+			{
+				break;
+			}
+		}
+		
+		
+	}
+	
+	void onReleaseAmbulance()
+	{
+		++ambulancesCount;
+	}
+	
 	HospitalManagementAgent agent;
+	List<IncidentHandlingBehaviuor> incidentsList;
+	int ambulancesCount =0;
+	
 	
 }
 
@@ -267,7 +494,11 @@ public class HospitalManagementAgent extends Agent
 		
         System.out.println("Hello World. ");
         System.out.println("My name is "+ getLocalName()); 
-        addBehaviour(new HospitalManagementBehaviour(this));
+        SequentialBehaviour seq = new SequentialBehaviour();
+        addBehaviour( seq );
+        seq.addSubBehaviour(parallelBehaviour);
+        //addBehaviour(new HospitalManagementBehaviour(this));
+        parallelBehaviour.addSubBehaviour(new HospitalManagementBehaviour(this));
     }
 	
 	public void logAction(String logMessage)
@@ -287,4 +518,6 @@ public class HospitalManagementAgent extends Agent
 	
 	public Codec codec = new SLCodec();
 	public Ontology ontology = DisasterManagement.getInstance();
+	
+	public ParallelBehaviour parallelBehaviour = new ParallelBehaviour();
 }

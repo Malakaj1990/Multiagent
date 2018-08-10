@@ -12,6 +12,8 @@ import jade.content.onto.Ontology;
 import jade.content.onto.basic.Action;
 import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.ParallelBehaviour;
+import jade.core.behaviours.SequentialBehaviour;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
@@ -131,7 +133,7 @@ class PoliceManagementBehaviour extends SimpleBehaviour
 				Concept action = ((Action)content).getAction();
 				if(action instanceof ReportAccidentAction)
 				{
-					agent.addBehaviour(new PoliceIncidentHandlingBehaviuor(agent,msg.getConversationId(),(ReportAccidentAction)action));
+					agent.parallelBehaviour.addSubBehaviour(new PoliceIncidentHandlingBehaviuor(agent,msg.getConversationId(),(ReportAccidentAction)action));
 					
 				}
 				else 
@@ -180,7 +182,10 @@ public class PoliceManagementAgent extends Agent{
 		
         System.out.println("Hello World. ");
         System.out.println("My name is "+ getLocalName()); 
-        addBehaviour(new PoliceManagementBehaviour(this));
+        SequentialBehaviour seq = new SequentialBehaviour();
+        addBehaviour( seq );
+        seq.addSubBehaviour(parallelBehaviour);
+        parallelBehaviour.addSubBehaviour(new PoliceManagementBehaviour(this));
     }
 	
 
@@ -202,4 +207,5 @@ public class PoliceManagementAgent extends Agent{
 	public Codec codec = new SLCodec();
 	public Ontology ontology = DisasterManagement.getInstance();
 	
+	public ParallelBehaviour parallelBehaviour = new ParallelBehaviour();
 }
